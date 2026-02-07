@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>YouTube Channel Analytics ─ Modern Dashboard 2026</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            'yt-red':    '#ff0000',
+            'card-bg':   'rgba(31, 41, 55, 0.6)',
+            'glass':     'rgba(17, 24, 39, 0.7)',
+            'neon-blue': '#3b82f6',
+            'neon-cyan': '#06b6d4',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); background-attachment: fixed; }
+    .glass { background: rgba(31, 41, 55, 0.45); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); }
+    .glow-blue { box-shadow: 0 0 25px -5px rgba(59,130,246,0.5); }
+    .glow-red  { box-shadow: 0 0 25px -5px rgba(239,68,68,0.4); }
+  </style>
+</head>
+<body class="min-h-screen text-gray-100 font-sans antialiased">
+
+  <!-- Header -->
+  <header class="glass sticky top-0 z-50 border-b border-gray-700/50 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-rose-500 flex items-center justify-center text-white font-bold text-xl">YT</div>
+        <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">YouTube Analytics</h1>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <input id="apiKey" type="password" placeholder="API Key" class="glass px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 w-56 text-sm">
+        <input id="channelId" placeholder="Channel ID (UC...)" class="glass px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 w-56 text-sm">
+        <button id="btnFetch" class="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 px-6 py-2 rounded-lg font-medium transition-all glow-blue">
+          取得開始
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Channel Info + Status -->
+    <div class="glass rounded-2xl p-6 mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+      <div class="flex items-center gap-5">
+        <img id="channelIcon" src="https://via.placeholder.com/80" class="w-20 h-20 rounded-full object-cover border-2 border-gray-600/50">
+        <div>
+          <h2 id="channelName" class="text-2xl font-bold">チャンネル名</h2>
+          <p id="status" class="text-gray-400 mt-1">待機中…</p>
+        </div>
+      </div>
+      <button id="btnSaveCSV" class="px-6 py-2.5 bg-emerald-600/80 hover:bg-emerald-700 rounded-lg transition disabled:opacity-50" disabled>CSV保存</button>
+    </div>
+
+    <!-- Filters -->
+    <div class="glass rounded-xl p-5 mb-8">
+      <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+        <div>
+          <label class="block text-sm text-gray-400 mb-1.5">タイトル検索</label>
+          <input id="filterTitle" placeholder="キーワード…" class="w-full glass px-4 py-2.5 rounded-lg border border-gray-600 focus:border-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm text-gray-400 mb-1.5">種別</label>
+          <select id="filterType" class="w-full glass px-4 py-2.5 rounded-lg border border-gray-600 focus:border-blue-500">
+            <option value="all">すべて</option>
+            <option value="video">動画</option>
+            <option value="live">ライブ</option>
+            <option value="short">ショート</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-400 mb-1.5">最低再生回数</label>
+          <input id="filterViewMin" type="number" placeholder="0" class="w-full glass px-4 py-2.5 rounded-lg border border-gray-600 focus:border-blue-500">
+        </div>
+        <div class="flex items-end">
+          <button id="btnApplyFilter" class="w-full bg-gray-700 hover:bg-gray-600 px-6 py-2.5 rounded-lg transition">適用</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+      <div class="glass rounded-2xl p-6 glow-blue">
+        <p class="text-gray-400 text-sm">総コンテンツ</p>
+        <p id="totalCount" class="text-4xl font-bold mt-2">0</p>
+      </div>
+      <div class="glass rounded-2xl p-6">
+        <p class="text-gray-400 text-sm">通常動画</p>
+        <p id="videoCount" class="text-4xl font-bold mt-2 text-blue-400">0</p>
+      </div>
+      <div class="glass rounded-2xl p-6 glow-red">
+        <p class="text-gray-400 text-sm">ライブ配信</p>
+        <p id="liveCount" class="text-4xl font-bold mt-2 text-red-400">0</p>
+      </div>
+      <div class="glass rounded-2xl p-6">
+        <p class="text-gray-400 text-sm">ショート</p>
+        <p id="shortCount" class="text-4xl font-bold mt-2 text-cyan-400">0</p>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex border-b border-gray-700 mb-6">
+      <button data-tab="table" class="tab-btn px-6 py-3 font-medium border-b-2 border-transparent data-active:border-blue-500 data-active:text-blue-400">データテーブル</button>
+      <button data-tab="stats" class="tab-btn px-6 py-3 font-medium border-b-2 border-transparent data-active:border-blue-500 data-active:text-blue-400">詳細統計</button>
+    </div>
+
+    <!-- Table Tab -->
+    <div id="tab-table" class="tab-content">
+      <div class="glass rounded-2xl overflow-hidden border border-gray-700/50">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-800/70">
+              <tr>
+                <th class="px-6 py-4 text-left">タイトル</th>
+                <th class="px-4 py-4 text-center">再生</th>
+                <th class="px-4 py-4 text-center">いいね</th>
+                <th class="px-4 py-4 text-center">コメント</th>
+                <th class="px-4 py-4 text-center">種別</th>
+                <th class="px-6 py-4 text-center">公開日時 (JST)</th>
+                <th class="px-4 py-4 text-center">長さ</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody" class="divide-y divide-gray-700/50"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Tab -->
+    <div id="tab-stats" class="tab-content hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="glass rounded-2xl p-6">
+          <h3 class="text-lg font-semibold mb-5">年別内訳</h3>
+          <div id="yearlyStats" class="space-y-3"></div>
+        </div>
+        <div class="glass rounded-2xl p-6">
+          <h3 class="text-lg font-semibold mb-5">直近12ヶ月</h3>
+          <div id="monthlyStats" class="space-y-3"></div>
+        </div>
+        <div class="glass rounded-2xl p-6">
+          <h3 class="text-lg font-semibold mb-5">時間帯分布</h3>
+          <div id="hourlyStats" class="space-y-3"></div>
+        </div>
+        <div class="glass rounded-2xl p-6">
+          <h3 class="text-lg font-semibold mb-5">曜日別分布</h3>
+          <div id="weekdayStats" class="space-y-3"></div>
+        </div>
+      </div>
+
+      <div class="glass rounded-2xl p-6 mt-8">
+        <h3 class="text-lg font-semibold mb-4">ライブ配信サマリー</h3>
+        <p id="liveSummary" class="text-gray-300">データなし</p>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    let allVideos = [];
+    const els = {
+      apiKey: document.getElementById('apiKey'),
+      channelId: document.getElementById('channelId'),
+      btnFetch: document.getElementById('btnFetch'),
+      status: document.getElementById('status'),
+      channelIcon: document.getElementById('channelIcon'),
+      channelName: document.getElementById('channelName'),
+      btnSaveCSV: document.getElementById('btnSaveCSV'),
+      filterTitle: document.getElementById('filterTitle'),
+      filterType: document.getElementById('filterType'),
+      filterViewMin: document.getElementById('filterViewMin'),
+      btnApplyFilter: document.getElementById('btnApplyFilter'),
+      totalCount: document.getElementById('totalCount'),
+      videoCount: document.getElementById('videoCount'),
+      liveCount: document.getElementById('liveCount'),
+      shortCount: document.getElementById('shortCount'),
+      tableBody: document.getElementById('tableBody'),
+      yearlyStats: document.getElementById('yearlyStats'),
+      monthlyStats: document.getElementById('monthlyStats'),
+      hourlyStats: document.getElementById('hourlyStats'),
+      weekdayStats: document.getElementById('weekdayStats'),
+      liveSummary: document.getElementById('liveSummary'),
+    };
+
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('data-active'));
+        btn.classList.add('data-active');
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        document.getElementById(`tab-${btn.dataset.tab}`).classList.remove('hidden');
+      });
+    });
+
+    els.btnFetch.addEventListener('click', async () => {
+      const api = els.apiKey.value.trim();
+      const cid = els.channelId.value.trim();
+      if (!api || !cid.startsWith('UC')) {
+        els.status.textContent = 'APIキーまたはチャンネルIDを確認してください';
+        return;
+      }
+
+      els.btnFetch.disabled = true;
+      els.btnFetch.textContent = '取得中...';
+      els.status.textContent = 'チャンネル情報取得中...';
+
+      try {
+        // Channel metadata
+        const chRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,contentDetails&id=${cid}&key=${api}`).then(r => r.json());
+        if (!chRes.items?.length) throw new Error('チャンネルが見つかりません');
+        const item = chRes.items[0];
+        els.channelName.textContent = item.snippet.title;
+        els.channelIcon.src = item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default.url;
+
+        const uploads = item.contentDetails.relatedPlaylists.uploads; // UU...
+        const shortPl = 'UUSH' + cid.slice(2);
+        const livePl  = 'UULV' + cid.slice(2);
+
+        const playlists = [
+          { id: uploads,  type: 'video' },
+          { id: shortPl,  type: 'short' },
+          { id: livePl,   type: 'live'  }
+        ];
+
+        const videoMap = new Map(); // videoId → {type, ...}
+
+        for (const pl of playlists) {
+          let token = '';
+          do {
+            const plRes = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&playlistId=${pl.id}&maxResults=50&pageToken=${token}&key=${api}`).then(r => r.json());
+            if (plRes.error) break; // プレイリスト不存在時はスキップ
+
+            for (const it of (plRes.items || [])) {
+              const vid = it.contentDetails.videoId;
+              // 優先度: live > short > video
+              if (!videoMap.has(vid) || pl.type === 'live' || (pl.type === 'short' && videoMap.get(vid).type !== 'live')) {
+                videoMap.set(vid, { videoId: vid, playlistType: pl.type });
+              }
+            }
+            token = plRes.nextPageToken || '';
+          } while (token);
+        }
+
+        if (!videoMap.size) throw new Error('動画が見つかりませんでした');
+
+        // Fetch video details in batches
+        const videoIds = Array.from(videoMap.keys());
+        const details = [];
+
+        for (let i = 0; i < videoIds.length; i += 50) {
+          const batch = videoIds.slice(i, i + 50).join(',');
+          const vidRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails,liveStreamingDetails&id=${batch}&key=${api}`).then(r => r.json());
+
+          for (const v of (vidRes.items || [])) {
+            const s = v.snippet;
+            const st = v.statistics || {};
+            const ls = v.liveStreamingDetails || {};
+            const cd = v.contentDetails || {};
+
+            let pub = s.publishedAt ? new Date(s.publishedAt) : null;
+            let durationSec = 0;
+            if (cd.duration) {
+              const match = cd.duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+              if (match) durationSec = (parseInt(match[1]||0)*3600) + (parseInt(match[2]||0)*60) + parseInt(match[3]||0);
+            }
+
+            const playlistType = videoMap.get(v.id)?.playlistType || 'video';
+            let type = playlistType;
+            if (s.liveBroadcastContent !== 'none') type = 'live'; // 最終補強
+
+            details.push({
+              title: s.title,
+              videoId: v.id,
+              publishedAt: pub ? pub.toISOString() : '',
+              publishedAtJst: pub ? pub.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) : '',
+              viewCount: Number(st.viewCount || 0),
+              likeCount: Number(st.likeCount || 0),
+              commentCount: Number(st.commentCount || 0),
+              type,
+              durationSec,
+              url: `https://www.youtube.com/watch?v=${v.id}`
+            });
+          }
+          await new Promise(r => setTimeout(r, 400)); // quota節約
+        }
+
+        allVideos = details.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+        applyFilter();
+        renderStats(allVideos);
+
+        els.status.textContent = `完了：${allVideos.length}件取得`;
+        els.btnSaveCSV.disabled = false;
+
+      } catch (err) {
+        els.status.textContent = `エラー: ${err.message}`;
+        console.error(err);
+      } finally {
+        els.btnFetch.disabled = false;
+        els.btnFetch.textContent = '取得開始';
+      }
+    });
+
+    function renderTable(videos) {
+      els.tableBody.innerHTML = '';
+      videos.forEach(v => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-800/40 transition-colors';
+        tr.innerHTML = `
+          <td class="px-6 py-4"><a href="${v.url}" target="_blank" class="text-blue-400 hover:underline">${v.title}</a></td>
+          <td class="px-4 py-4 text-center">${v.viewCount.toLocaleString()}</td>
+          <td class="px-4 py-4 text-center">${v.likeCount.toLocaleString()}</td>
+          <td class="px-4 py-4 text-center">${v.commentCount.toLocaleString()}</td>
+          <td class="px-4 py-4 text-center">
+            <span class="px-2.5 py-1 rounded-full text-xs font-medium ${
+              v.type === 'live'  ? 'bg-red-900/60 text-red-300' :
+              v.type === 'short' ? 'bg-cyan-900/60 text-cyan-300' :
+              'bg-blue-900/60 text-blue-300'
+            }">${v.type.toUpperCase()}</span>
+          </td>
+          <td class="px-6 py-4 text-center">${v.publishedAtJst || '-'}</td>
+          <td class="px-4 py-4 text-center">${v.durationSec ? Math.floor(v.durationSec / 60) + '分' : '-'}</td>
+        `;
+        els.tableBody.appendChild(tr);
+      });
+    }
+
+    function renderStats(videos) {
+      const total = videos.length;
+      const videosOnly = videos.filter(v => v.type === 'video').length;
+      const lives = videos.filter(v => v.type === 'live').length;
+      const shorts = videos.filter(v => v.type === 'short').length;
+
+      els.totalCount.textContent = total;
+      els.videoCount.textContent = videosOnly;
+      els.liveCount.textContent  = lives;
+      els.shortCount.textContent = shorts;
+
+      // クロス集計用のヘルパー
+      function crosstab(groupKeyFn) {
+        const groups = {};
+        videos.forEach(v => {
+          const key = groupKeyFn(v);
+          if (!key) return;
+          if (!groups[key]) groups[key] = { video: 0, live: 0, short: 0 };
+          groups[key][v.type]++;
+        });
+        return groups;
+      }
+
+      // 年別（年降順）
+      const byYear = crosstab(v => {
+        const y = new Date(v.publishedAt).getFullYear();
+        return isNaN(y) ? null : y;
+      });
+      renderCrosstab(els.yearlyStats, byYear, '年', sortYearsDesc);
+
+      // 直近12ヶ月（月降順、最新から12件）
+      const byMonth = crosstab(v => {
+        const d = new Date(v.publishedAt);
+        if (isNaN(d)) return null;
+        return d.toISOString().slice(0,7); // YYYY-MM
+      });
+      renderCrosstab(els.monthlyStats, byMonth, '', sortMonthsDesc, 12);
+
+      // 時間帯（0〜23 昇順）
+      const byHour = crosstab(v => new Date(v.publishedAt).getHours());
+      renderCrosstab(els.hourlyStats, byHour, '時', sortNumericAsc);
+
+      // 曜日（0=日〜6=土 昇順）
+      const byWd = crosstab(v => new Date(v.publishedAt).getDay());
+      const wdLabels = ['日','月','火','水','木','金','土'];
+      renderCrosstab(els.weekdayStats, byWd, '', sortNumericAsc, null, wdLabels);
+
+      // Live summary
+      if (lives > 0) {
+        const liveVideos = videos.filter(v => v.type === 'live');
+        const avgMin = (liveVideos.reduce((sum, v) => sum + (v.durationSec || 0), 0) / lives / 60).toFixed(1);
+        const maxView = Math.max(...liveVideos.map(v => v.viewCount));
+        els.liveSummary.textContent = `平均配信時間: ${avgMin}分 | 最大再生: ${maxView.toLocaleString()}回`;
+      } else {
+        els.liveSummary.textContent = 'ライブ配信データなし';
+      }
+    }
+
+    // ソート関数
+    function sortYearsDesc(a, b) { return b.key - a.key; }
+    function sortMonthsDesc(a, b) { return b.key.localeCompare(a.key); } // YYYY-MM文字列で降順OK
+    function sortNumericAsc(a, b) { return a.key - b.key; }
+
+    // クロス集計表示（動|配|短 の3列）
+    function renderCrosstab(container, data, unit = '', sortFn = sortNumericAsc, limit = null, labels = null) {
+      container.innerHTML = '';
+
+      let entries = Object.entries(data).map(([key, counts]) => ({ key, ...counts }));
+      entries.sort(sortFn);
+      if (limit) entries = entries.slice(0, limit);
+
+      // ヘッダー行（一度だけ）
+      if (entries.length > 0) {
+        const header = document.createElement('div');
+        header.className = 'flex bg-gray-800/50 py-2 px-4 rounded-t text-sm font-medium text-gray-300';
+        header.innerHTML = `
+          <div class="w-16">区分</div>
+          <div class="flex-1 text-center">動</div>
+          <div class="flex-1 text-center">配</div>
+          <div class="flex-1 text-center">短</div>
+        `;
+        container.appendChild(header);
+      }
+
+      entries.forEach(entry => {
+        const label = labels ? labels[entry.key] : entry.key + unit;
+        const total = entry.video + entry.live + entry.short;
+        const pct = total > 0 ? (total / allVideos.length * 100).toFixed(1) : '0.0';
+
+        const row = document.createElement('div');
+        row.className = 'flex justify-between items-center py-2 px-4 border-b border-gray-700/40 last:border-0 hover:bg-gray-800/30';
+        row.innerHTML = `
+          <div class="w-16 text-gray-300">${label}</div>
+          <div class="flex-1 text-center text-blue-300">${entry.video}</div>
+          <div class="flex-1 text-center text-red-300">${entry.live}</div>
+          <div class="flex-1 text-center text-cyan-300">${entry.short}</div>
+          <div class="w-20 text-right text-gray-500 text-xs">(${pct}%)</div>
+        `;
+        container.appendChild(row);
+      });
+
+      if (entries.length === 0) {
+        container.innerHTML = '<div class="text-center py-4 text-gray-500">データなし</div>';
+      }
+    }
+
+    function applyFilter() {
+      let filtered = [...allVideos];
+
+      const q = els.filterTitle.value.trim().toLowerCase();
+      if (q) filtered = filtered.filter(v => v.title.toLowerCase().includes(q));
+
+      const type = els.filterType.value;
+      if (type !== 'all') filtered = filtered.filter(v => v.type === type);
+
+      const minView = Number(els.filterViewMin.value) || 0;
+      if (minView > 0) filtered = filtered.filter(v => v.viewCount >= minView);
+
+      renderTable(filtered);
+    }
+
+    els.btnApplyFilter.addEventListener('click', applyFilter);
+    els.filterTitle.addEventListener('input', e => { if (e.target.value.length > 1) applyFilter(); });
+    els.filterType.addEventListener('change', applyFilter);
+    els.filterViewMin.addEventListener('input', applyFilter);
+
+    // CSV
+    els.btnSaveCSV.addEventListener('click', () => {
+      if (!allVideos.length) return;
+      const headers = ['タイトル','公開日時(JST)','再生回数','いいね','コメント','種別','URL'];
+      const rows = allVideos.map(v => [
+        `"${v.title.replace(/"/g,'""')}"`,
+        v.publishedAtJst,
+        v.viewCount,
+        v.likeCount,
+        v.commentCount,
+        v.type,
+        v.url
+      ]);
+      const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+      const blob = new Blob([new Uint8Array([0xEF,0xBB,0xBF]), csv], {type: 'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `youtube_analytics_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click(); URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>

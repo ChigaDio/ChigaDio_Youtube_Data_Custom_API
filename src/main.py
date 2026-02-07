@@ -7,8 +7,8 @@ def main():
 
     
     find = YoutubeDataFind(
-    Api="YOUTUBE_API_KEY",
-    ChannelId="ChANNEL_ID_HERE",
+    Api="",
+    ChannelId="UCHVXbQzkl3rDfsXWo8xi2qw",
     MaxResults=0
     )
 
@@ -28,9 +28,13 @@ def main():
     # データフレームに変換
     data = []
     for v in results:
+        if  v.scheduled_start_time and (v.scheduled_start_time - v.published_at > pd.Timedelta(days=30)):
+            continue
         row = {
             "title": v.title,
             "video_id": v.video_id,
+            "is_short": False if v.scheduled_start_time  else True,
+            "is_video": False if v.published_at != v.actual_start_time  else True,
             "published_at": v.published_at.isoformat() if v.published_at else "",
             "view_count": v.view_count,
             "like_count": v.like_count,

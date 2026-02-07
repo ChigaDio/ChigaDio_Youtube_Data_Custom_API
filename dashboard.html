@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>配信予測ダッシュボード | STREAM ORACLE</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+JP:wght@400;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg-primary: #0a0e27;
+            --bg-secondary: #151932;
+            --bg-card: #1a1f3a;
+            --accent-primary: #00d9ff;
+            --accent-secondary: #7c3aed;
+            --accent-warning: #f59e0b;
+            --accent-success: #10b981;
+            --accent-danger: #ef4444;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border-color: rgba(0, 217, 255, 0.1);
+        }
+        
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(124, 58, 237, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(0, 217, 255, 0.15) 0%, transparent 50%);
+            background-attachment: fixed;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            position: relative;
+            padding: 2rem 0;
+        }
+        
+        .logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+            animation: glow 3s ease-in-out infinite;
+        }
+        
+        @keyframes glow {
+            0%, 100% { filter: drop-shadow(0 0 20px rgba(0, 217, 255, 0.3)); }
+            50% { filter: drop-shadow(0 0 40px rgba(124, 58, 237, 0.5)); }
+        }
+        
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            letter-spacing: 0.05em;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-primary);
+            box-shadow: 0 10px 40px rgba(0, 217, 255, 0.2);
+        }
+        
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 900;
+            font-family: 'JetBrains Mono', monospace;
+            background: linear-gradient(135deg, var(--accent-primary), #fff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Prediction Table */
+        .prediction-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 900;
+            margin-bottom: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .section-title::before {
+            content: '▸';
+            color: var(--accent-primary);
+            font-size: 1.2em;
+        }
+        
+        .prediction-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 0.5rem;
+        }
+        
+        .prediction-table thead th {
+            text-align: left;
+            padding: 1rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        .prediction-table tbody tr {
+            background: var(--bg-secondary);
+            transition: all 0.3s ease;
+        }
+        
+        .prediction-table tbody tr:hover {
+            transform: scale(1.01);
+            box-shadow: 0 4px 20px rgba(0, 217, 255, 0.1);
+        }
+        
+        .prediction-table tbody td {
+            padding: 1.25rem 1rem;
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .prediction-table tbody tr td:first-child {
+            border-left: 1px solid var(--border-color);
+            border-top-left-radius: 12px;
+            border-bottom-left-radius: 12px;
+        }
+        
+        .prediction-table tbody tr td:last-child {
+            border-right: 1px solid var(--border-color);
+            border-top-right-radius: 12px;
+            border-bottom-right-radius: 12px;
+        }
+        
+        .date-cell {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+        }
+        
+        .weekday-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 700;
+        }
+        
+        .weekday-weekend {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--accent-danger);
+        }
+        
+        .weekday-normal {
+            background: rgba(0, 217, 255, 0.2);
+            color: var(--accent-primary);
+        }
+        
+        .probability-bar {
+            position: relative;
+            width: 100%;
+            height: 32px;
+            background: rgba(0, 217, 255, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .probability-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            display: flex;
+            align-items: center;
+            padding: 0 0.75rem;
+            font-weight: 700;
+            font-size: 0.875rem;
+            font-family: 'JetBrains Mono', monospace;
+            transition: width 1s ease-out;
+        }
+        
+        .prediction-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.875rem;
+        }
+        
+        .prediction-yes {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-success);
+            border: 1px solid var(--accent-success);
+        }
+        
+        .prediction-no {
+            background: rgba(148, 163, 184, 0.2);
+            color: var(--text-secondary);
+            border: 1px solid var(--text-secondary);
+        }
+        
+        .prediction-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Model Info */
+        .model-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .model-metric {
+            text-align: center;
+        }
+        
+        .model-metric-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+        
+        .model-metric-value {
+            font-size: 1.5rem;
+            font-weight: 900;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-primary);
+        }
+
+        /* Feature Importance Section (New) */
+        .features-section {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .feature-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .feature-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .feature-importance {
+            color: var(--accent-primary);
+            font-weight: 700;
+        }
+        
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+        
+        .delay-1 { animation-delay: 0.1s; opacity: 0; }
+        .delay-2 { animation-delay: 0.2s; opacity: 0; }
+        .delay-3 { animation-delay: 0.3s; opacity: 0; }
+        .delay-4 { animation-delay: 0.4s; opacity: 0; }
+        
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-top: 4rem;
+            border-top: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 class="logo">STREAM ORACLE</h1>
+            <p class="subtitle">AI-Powered Broadcast Prediction System</p>
+        </header>
+        
+        <div class="stats-grid">
+            <div class="stat-card fade-in delay-1">
+                <div class="stat-label">モデル最高精度 (RF)</div>
+                <div class="stat-value">58.7%</div>
+            </div>
+            <div class="stat-card fade-in delay-2">
+                <div class="stat-label">最良F1スコア (GB)</div>
+                <div class="stat-value">0.422</div>
+            </div>
+            <div class="stat-card fade-in delay-3">
+                <div class="stat-label">歴史的配信率</div>
+                <div class="stat-value">32.5%</div>
+            </div>
+            <div class="stat-card fade-in delay-4">
+                <div class="stat-label">時間予測誤差 (MAE)</div>
+                <div class="stat-value">1.37h</div>
+            </div>
+        </div>
+        
+        <div class="prediction-section fade-in">
+            <h2 class="section-title">今後7日間の配信予測</h2>
+            <table class="prediction-table">
+                <thead>
+                    <tr>
+                        <th>日付</th>
+                        <th>曜日</th>
+                        <th>配信確率</th>
+                        <th>予測結果</th>
+                        <th>予測時間</th>
+                    </tr>
+                </thead>
+                <tbody id="predictions-body">
+                    </tbody>
+            </table>
+        </div>
+        
+        <div class="model-info fade-in">
+            <div class="model-metric">
+                <div class="model-metric-label">学習サンプル数</div>
+                <div class="model-metric-value">2,496</div>
+            </div>
+            <div class="model-metric">
+                <div class="model-metric-label">特徴量数</div>
+                <div class="model-metric-value">30</div>
+            </div>
+            <div class="model-metric">
+                <div class="model-metric-label">アンサンブル</div>
+                <div class="model-metric-value" style="font-size: 1rem;">Soft Voting</div>
+            </div>
+            <div class="model-metric">
+                <div class="model-metric-label">主要な特徴量</div>
+                <div class="model-metric-value" style="font-size: 0.9rem; color: var(--accent-secondary);">time_index</div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Powered by Gradient Boosting & Ensemble Learning | © 2026 Stream Prediction System</p>
+        </footer>
+    </div>
+    
+    <script>
+        // ログから抽出した実際の予測データ
+        const predictions = [
+            { date: '2026/02/06', weekday: '金', isWeekend: false, probability: 35.7, prediction: false, hour: null },
+            { date: '2026/02/07', weekday: '土', isWeekend: true,  probability: 44.0, prediction: false, hour: null },
+            { date: '2026/02/08', weekday: '日', isWeekend: true,  probability: 53.7, prediction: true,  hour: 21 },
+            { date: '2026/02/09', weekday: '月', isWeekend: false, probability: 52.9, prediction: true,  hour: 22 },
+            { date: '2026/02/10', weekday: '火', isWeekend: false, probability: 57.2, prediction: true,  hour: 22 },
+            { date: '2026/02/11', weekday: '水', isWeekend: false, probability: 53.9, prediction: true,  hour: 22 },
+            { date: '2026/02/12', weekday: '木', isWeekend: false, probability: 53.7, prediction: true,  hour: 22 }
+        ];
+        
+        const tbody = document.getElementById('predictions-body');
+        
+        predictions.forEach((pred, index) => {
+            const row = document.createElement('tr');
+            row.style.animationDelay = `${index * 0.1}s`;
+            row.classList.add('fade-in');
+            
+            row.innerHTML = `
+                <td class="date-cell">${pred.date}</td>
+                <td>
+                    <span class="weekday-badge ${pred.isWeekend ? 'weekday-weekend' : 'weekday-normal'}">
+                        ${pred.weekday}曜日
+                    </span>
+                </td>
+                <td>
+                    <div class="probability-bar">
+                        <div class="probability-fill" style="width: 0%" data-width="${pred.probability}%">
+                            ${pred.probability}%
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="prediction-badge ${pred.prediction ? 'prediction-yes' : 'prediction-no'}">
+                        ${pred.prediction ? '✓ 配信あり' : '✗ 配信なし'}
+                    </span>
+                </td>
+                <td class="date-cell" style="color: ${pred.hour ? 'var(--accent-primary)' : 'var(--text-secondary)'}">
+                    ${pred.hour ? `${pred.hour}時頃` : '-'}
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+        
+        // プログレスバーのアニメーション
+        setTimeout(() => {
+            document.querySelectorAll('.probability-fill').forEach(fill => {
+                fill.style.width = fill.dataset.width;
+            });
+        }, 500);
+    </script>
+</body>
+</html>
